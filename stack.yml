@@ -1,0 +1,51 @@
+# Marand Think!EHR Viewer
+version: '3.5'
+
+services:
+
+  ehrviewer-app:
+    image: inidus/marand-ehrviewer-app:latest
+#    labels:
+#      - "cloud.inidus.service.client"
+    build:
+      context: .
+      labels:
+        - "cloud.inidus.service.name=EHR Viewer"
+        - "cloud.inidus.service.desc=Marand ThinkEHR EHR Viewer"
+      args:
+        - EHRVIEWER_SRC
+    restart: always
+    ports:
+      - "8082:8080"
+    deploy:
+      labels:
+        - "traefik.enable=true"
+        - "traefik.domain=${INIDUS_DOMAIN}"
+        - "traefik.docker.network=frontend"
+        - "traefik.entrypoints=https"
+        - "traefik.backend.loadbalancer.stickiness=true"
+        - "traefik.backend.loadbalancer.swarm=true"
+        - "traefik.frontend.passHostHeader=true"
+        - "traefik.frontend.rule=Host:ehrviewer-app.${INIDUS_CLIENT}.${INIDUS_DOMAIN}"
+        - "traefik.port=8080"
+      replicas: 1
+      update_config:
+        parallelism: 2
+        delay: 10s
+      restart_policy:
+        condition: on-failure
+    networks:
+      - ehrviewer
+      - frontend
+    configs:
+      - source: ehrviewer_properties
+        target: /usr/local/tomcat/conf/ehrviewer.properties
+
+configs:
+  ehrviewer_properties:
+    file: conf/ehrviewer.properties
+
+networks:
+  ehrviewer:
+  frontend:
+    external: true
